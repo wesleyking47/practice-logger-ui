@@ -1,5 +1,6 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
+import { SessionList } from "~/sessions-list/sessions-list";
+import { PracticeSessionService } from "~/services/practice-session";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -8,6 +9,11 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
-  return <Welcome />;
+export async function loader() {
+  const response = await PracticeSessionService.getAll();
+  return { sessions: response.sessions };
+}
+
+export default function Home({ loaderData }: Route.ComponentProps) {
+  return <SessionList sessions={loaderData.sessions} />;
 }

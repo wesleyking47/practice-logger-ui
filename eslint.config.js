@@ -30,5 +30,24 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      "react-refresh/only-export-components": [
+        "warn",
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            "meta",
+            "links",
+            "headers",
+            "loader",
+            "action",
+            "clientLoader",
+            "clientAction",
+            "shouldRevalidate",
+            "handle",
+          ],
+        },
+      ],
+    },
   },
 ]);

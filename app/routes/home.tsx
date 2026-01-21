@@ -2,7 +2,7 @@ import type { Route } from "./+types/home";
 import { SessionList } from "~/sessions-list/sessions-list";
 import { PracticeSessionService } from "~/services/practice-session";
 
-export function meta({}: Route.MetaArgs) {
+export function meta() {
   return [
     { title: "New React Router App" },
     { name: "description", content: "Welcome to React Router!" },
@@ -12,6 +12,24 @@ export function meta({}: Route.MetaArgs) {
 export async function loader() {
   const response = await PracticeSessionService.getAll();
   return { sessions: response.sessions };
+}
+
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData();
+
+  const activity = formData.get("activity") as string;
+  const date = formData.get("date") as string;
+  const notes = formData.get("notes") as string;
+  const minutes = Number(formData.get("minutes"));
+
+  await PracticeSessionService.create({
+    activity,
+    date,
+    notes,
+    minutes,
+  });
+
+  return null;
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {

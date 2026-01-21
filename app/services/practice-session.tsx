@@ -25,7 +25,7 @@ export const PracticeSessionService = {
       body: JSON.stringify(session),
     });
     if (!response.ok) {
-      throw new Error("Failed to create session");
+      throw new Error(response.statusText);
     }
     return response.json() as Promise<PracticeSession>;
   },

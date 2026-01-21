@@ -29,4 +29,24 @@ export const PracticeSessionService = {
     }
     return response.json() as Promise<PracticeSession>;
   },
+
+  async delete(id: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/sessions/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+  },
+
+  async update(session: PracticeSession): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/sessions/${session.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(session),
+    });
+    if (!response.ok) {
+      throw new Error(response.statusText);
+    }
+  },
 };

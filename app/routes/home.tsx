@@ -16,6 +16,31 @@ export async function loader() {
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
+  const intent = formData.get("intent") ?? "create";
+
+  if (intent === "delete") {
+    const id = Number(formData.get("id"));
+    await PracticeSessionService.delete(id);
+    return null;
+  }
+
+  if (intent === "update") {
+    const id = formData.get("id") as string;
+    const activity = formData.get("activity") as string;
+    const date = formData.get("date") as string;
+    const notes = formData.get("notes") as string;
+    const minutes = Number(formData.get("minutes"));
+
+    await PracticeSessionService.update({
+      id,
+      activity,
+      date,
+      notes,
+      minutes,
+    });
+
+    return null;
+  }
 
   const activity = formData.get("activity") as string;
   const date = formData.get("date") as string;

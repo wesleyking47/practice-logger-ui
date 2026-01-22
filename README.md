@@ -1,27 +1,21 @@
-# Welcome to React Router!
+# Practice Logger UI
 
-A modern, production-ready template for building full-stack React applications using React Router.
+A React Router 7 + React 19 frontend for logging practice sessions. It fetches session data from a companion API and provides create, update, and delete flows for sessions.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## Tech Stack
 
-## Features
+- React 19 + React Router 7 (data loaders/actions)
+- Tailwind CSS v4 + shadcn/ui components
+- Vitest + Testing Library for unit tests
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-
-## Getting Started
+## Setup
 
 ### Installation
 
-Install the dependencies:
+Install dependencies:
 
 ```bash
-npm install
+bun install
 ```
 
 ### Development
@@ -29,17 +23,53 @@ npm install
 Start the development server with HMR:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 Your application will be available at `http://localhost:5173`.
+
+### API Configuration
+
+The UI expects a backend service that exposes `GET/POST/PUT/DELETE /sessions`.
+Set `VITE_API_URL` to point at the API base URL (defaults to `http://localhost:5270`):
+
+```bash
+VITE_API_URL=http://localhost:5270
+```
 
 ## Building for Production
 
 Create a production build:
 
 ```bash
-npm run build
+bun run build
+```
+
+## Testing
+
+Run unit tests with Vitest:
+
+```bash
+bun run test
+```
+
+Watch mode:
+
+```bash
+bun run test:watch
+```
+
+Coverage report:
+
+```bash
+bun run test:coverage
+```
+
+## Linting and Typechecking
+
+```bash
+bun run lint:check
+bun run typecheck
 ```
 
 ## Deployment
@@ -68,7 +98,7 @@ The containerized application can be deployed to any platform that supports Dock
 
 If you're familiar with deploying Node applications, the built-in app server is production-ready.
 
-Make sure to deploy the output of `npm run build`
+Make sure to deploy the output of `bun run build`
 
 ```
 ├── package.json
@@ -77,11 +107,3 @@ Make sure to deploy the output of `npm run build`
 │   ├── client/    # Static assets
 │   └── server/    # Server-side code
 ```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.

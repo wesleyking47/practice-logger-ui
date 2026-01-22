@@ -73,12 +73,12 @@ jobs:
         run: bun install
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: bunx playwright install --with-deps
 
       - name: Run Playwright tests
         env:
           VITE_API_URL: http://localhost:5270
-        run: npx playwright test
+        run: bun run test:e2e
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

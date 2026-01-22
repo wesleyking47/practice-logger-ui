@@ -7,7 +7,7 @@ export interface PracticeSession {
   activity: string;
 }
 
-const API_BASE_URL = "http://localhost:5270";
+const API_BASE_URL = typeof process !== 'undefined' && process.env.VITE_API_URL ? process.env.VITE_API_URL : "http://localhost:5270";
 
 export const PracticeSessionService = {
   async getAll(): Promise<{ sessions: PracticeSession[] }> {

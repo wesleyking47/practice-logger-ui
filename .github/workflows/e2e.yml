@@ -1,0 +1,80 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout API repo
+        uses: actions/checkout@v6
+        with:
+          repository: wesleyking47/practice-logger-api
+          token: ${{ secrets.PRACTICE_LOGGER_API_TOKEN }}
+          path: practice-logger-api
+
+      - name: Build API image
+        run: docker build -t practice-logger-api:ci practice-logger-api
+
+      - name: Start Postgres
+        run: |
+          docker network create e2e-net
+          docker run -d --name practice-logger-db --network e2e-net \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=practice_logger \
+            -p 5432:5432 \
+            postgres:16
+
+      - name: Start API container
+        run: |
+          docker run -d --name practice-logger-api --network e2e-net \
+            -e ConnectionStrings__PracticeLoggerDb="Host=practice-logger-db;Port=5432;Database=practice_logger;Username=postgres;Password=postgres" \
+            -e ASPNETCORE_URLS="http://+:5270" \
+            -p 5270:5270 \
+            practice-logger-api:ci
+
+      - name: Wait for API
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:5270/healthz > /dev/null; then
+              echo "API is up"; exit 0;
+            fi
+            sleep 2
+          done
+          echo "API did not start in time" >&2
+          docker logs practice-logger-api || true
+          exit 1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        env:
+          VITE_API_URL: http://localhost:5270
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

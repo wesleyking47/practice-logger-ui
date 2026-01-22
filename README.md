@@ -65,6 +65,49 @@ Coverage report:
 bun run test:coverage
 ```
 
+### E2E (Playwright)
+
+Local E2E uses the API container + Postgres for parity with CI.
+
+Start Postgres:
+
+```bash
+docker network create practice-logger-net
+docker run -d --name practice-logger-db --network practice-logger-net \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=practice_logger \
+  -p 5432:5432 \
+  postgres:16
+```
+
+Build and run the API container:
+
+```bash
+docker build -t practice-logger-api:local ../practice-logger-api
+docker run -d --name practice-logger-api --network practice-logger-net \
+  -e ConnectionStrings__PracticeLoggerDb="Host=practice-logger-db;Port=5432;Database=practice_logger;Username=postgres;Password=postgres" \
+  -e ASPNETCORE_URLS="http://+:5270" \
+  -p 5270:5270 \
+  practice-logger-api:local
+```
+
+Run the UI dev server and Playwright:
+
+```bash
+VITE_API_URL=http://localhost:5270 bun run dev
+```
+
+```bash
+VITE_API_URL=http://localhost:5270 bun run test:e2e
+```
+
+Cleanup containers:
+
+```bash
+docker rm -f practice-logger-api practice-logger-db
+```
+
 ## Linting and Typechecking
 
 ```bash

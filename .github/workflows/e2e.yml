@@ -32,6 +32,17 @@ jobs:
             -e POSTGRES_DB=practice_logger \
             -p 5432:5432 \
             postgres:16
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if docker exec practice-logger-db pg_isready -U postgres -d practice_logger > /dev/null; then
+              echo "Postgres is up"; exit 0;
+            fi
+            sleep 2
+          done
+          echo "Postgres did not start in time" >&2
+          docker logs practice-logger-db || true
+          exit 1
 
       - name: Start API container
         run: |

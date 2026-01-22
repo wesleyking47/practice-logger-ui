@@ -16,20 +16,28 @@ export async function loader() {
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
-  const intent = formData.get("intent") ?? "create";
+  const intentValue = formData.get("intent");
+  const intent = typeof intentValue === "string" ? intentValue : "create";
 
   if (intent === "delete") {
-    const id = Number(formData.get("id"));
+    const idValue = formData.get("id");
+    const id = Number(typeof idValue === "string" ? idValue : "");
     await PracticeSessionService.delete(id);
     return null;
   }
 
   if (intent === "update") {
-    const id = formData.get("id") as string;
-    const activity = formData.get("activity") as string;
-    const date = formData.get("date") as string;
-    const notes = formData.get("notes") as string;
-    const minutes = Number(formData.get("minutes"));
+    const idValue = formData.get("id");
+    const activityValue = formData.get("activity");
+    const dateValue = formData.get("date");
+    const notesValue = formData.get("notes");
+    const minutesValue = formData.get("minutes");
+
+    const id = typeof idValue === "string" ? idValue : "";
+    const activity = typeof activityValue === "string" ? activityValue : "";
+    const date = typeof dateValue === "string" ? dateValue : "";
+    const notes = typeof notesValue === "string" ? notesValue : "";
+    const minutes = Number(typeof minutesValue === "string" ? minutesValue : "");
 
     await PracticeSessionService.update({
       id,
@@ -42,10 +50,15 @@ export async function action({ request }: Route.ActionArgs) {
     return null;
   }
 
-  const activity = formData.get("activity") as string;
-  const date = formData.get("date") as string;
-  const notes = formData.get("notes") as string;
-  const minutes = Number(formData.get("minutes"));
+  const activityValue = formData.get("activity");
+  const dateValue = formData.get("date");
+  const notesValue = formData.get("notes");
+  const minutesValue = formData.get("minutes");
+
+  const activity = typeof activityValue === "string" ? activityValue : "";
+  const date = typeof dateValue === "string" ? dateValue : "";
+  const notes = typeof notesValue === "string" ? notesValue : "";
+  const minutes = Number(typeof minutesValue === "string" ? minutesValue : "");
 
   await PracticeSessionService.create({
     activity,

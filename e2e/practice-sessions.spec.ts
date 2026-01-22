@@ -1,8 +1,36 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 
 const API_BASE_URL = process.env.VITE_API_URL ?? "http://localhost:5270";
 
-async function cleanupSessions(request: typeof test.request, activities: string[]) {
+interface SessionSummary {
+  id: number;
+  activity: string;
+}
+
+interface SessionsResponse {
+  sessions: SessionSummary[];
+}
+
+function isSessionsResponse(value: unknown): value is SessionsResponse {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const sessions = (value as { sessions?: unknown }).sessions;
+  if (!Array.isArray(sessions)) {
+    return false;
+  }
+
+  return sessions.every(
+    (session) =>
+      Boolean(session) &&
+      typeof session === "object" &&
+      typeof (session as { id?: unknown }).id === "number" &&
+      typeof (session as { activity?: unknown }).activity === "string"
+  );
+}
+
+async function cleanupSessions(request: APIRequestContext, activities: string[]) {
   if (activities.length === 0) {
     return;
   }
@@ -12,8 +40,12 @@ async function cleanupSessions(request: typeof test.request, activities: string[
     return;
   }
 
-  const data = (await response.json()) as { sessions?: Array<{ id: number; activity: string }> };
-  const sessions = data.sessions ?? [];
+  const data = (await response.json()) as unknown;
+  if (!isSessionsResponse(data)) {
+    return;
+  }
+
+  const sessions = data.sessions;
   const matches = sessions.filter((session) => activities.includes(session.activity));
 
   await Promise.all(
@@ -28,8 +60,12 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function uniqueActivity(label: string) {
+  return `${label} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 test("creates a practice session", async ({ page, request }) => {
-  const activity = `E2E Session ${Date.now()}`;
+  const activity = uniqueActivity("E2E Session");
   const createdActivities = [activity];
 
   try {
@@ -48,14 +84,17 @@ test("creates a practice session", async ({ page, request }) => {
     await page.getByLabel("Notes").fill("E2E test session");
     await page.getByRole("button", { name: "Save Session" }).click();
     await expect(addDialog).toBeHidden();
-    await expect(page.getByText(activity)).toBeVisible({ timeout: 10000 });
+    const cardTitle = page.locator('[data-slot="card-title"]', {
+      hasText: activity,
+    });
+    await expect(cardTitle).toHaveCount(1, { timeout: 10000 });
   } finally {
     await cleanupSessions(request, createdActivities);
   }
 });
 
 test("edits a practice session", async ({ page, request }) => {
-  const activity = `E2E Session ${Date.now()}`;
+  const activity = uniqueActivity("E2E Session");
   const updatedActivity = `${activity} Updated`;
   const createdActivities = [activity, updatedActivity];
 
@@ -72,7 +111,9 @@ test("edits a practice session", async ({ page, request }) => {
     await page.getByRole("button", { name: "Save Session" }).click();
     await expect(addDialog).toBeHidden();
 
-    const card = page.locator('[data-slot="card"]', { hasText: activity });
+    const card = page
+      .locator('[data-slot="card"]', { hasText: activity })
+      .first();
     await card.getByRole("button", { name: "Open menu" }).click();
     await page.getByRole("menuitem", { name: "Edit" }).click();
 
@@ -83,14 +124,17 @@ test("edits a practice session", async ({ page, request }) => {
     await editDialog.getByLabel("Duration (minutes)").fill("25");
     await editDialog.getByRole("button", { name: "Update Session" }).click();
     await expect(editDialog).toBeHidden();
-    await expect(page.getByText(updatedActivity)).toBeVisible({ timeout: 10000 });
+    const updatedTitle = page.locator('[data-slot="card-title"]', {
+      hasText: updatedActivity,
+    });
+    await expect(updatedTitle).toHaveCount(1, { timeout: 10000 });
   } finally {
     await cleanupSessions(request, createdActivities);
   }
 });
 
 test("deletes a practice session", async ({ page, request }) => {
-  const activity = `E2E Session ${Date.now()}`;
+  const activity = uniqueActivity("E2E Session");
   const createdActivities = [activity];
 
   try {
@@ -106,7 +150,9 @@ test("deletes a practice session", async ({ page, request }) => {
     await page.getByRole("button", { name: "Save Session" }).click();
     await expect(addDialog).toBeHidden();
 
-    const card = page.locator('[data-slot="card"]', { hasText: activity });
+    const card = page
+      .locator('[data-slot="card"]', { hasText: activity })
+      .first();
     await card.getByRole("button", { name: "Open menu" }).click();
     await page.getByRole("menuitem", { name: "Delete" }).click();
     await page.getByRole("button", { name: "Delete" }).click();

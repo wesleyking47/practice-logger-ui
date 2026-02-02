@@ -9,7 +9,7 @@ import {
 import { Button } from "~/components/ui/button";
 import type { PracticeSession } from "~/services/practice-session";
 import { useEffect, useRef, useState } from "react";
-import { useFetcher } from "react-router";
+import { Form, useFetcher } from "react-router";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import {
@@ -74,64 +74,80 @@ export function SessionList({ sessions }: { sessions: PracticeSession[] }) {
     <div className="container max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Practice Logger</h1>
-        <Dialog open={isAdding} onOpenChange={setIsAdding}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Session
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Practice Session</DialogTitle>
-            </DialogHeader>
-            <addFetcher.Form method="post" className="space-y-4">
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="activity">Activity</Label>
-                  <Input
-                    id="activity"
-                    name="activity"
-                    placeholder="e.g. Guitar"
-                    required
-                  />
+        <div className="flex items-center gap-3">
+          <Dialog open={isAdding} onOpenChange={setIsAdding}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Session
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Practice Session</DialogTitle>
+              </DialogHeader>
+              <addFetcher.Form method="post" className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="activity">Activity</Label>
+                    <Input
+                      id="activity"
+                      name="activity"
+                      placeholder="e.g. Guitar"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="date">Date</Label>
+                    <Input id="date" name="date" type="date" required />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="minutes">Duration (minutes)</Label>
+                    <Input
+                      id="minutes"
+                      name="minutes"
+                      type="number"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Input
+                      id="notes"
+                      name="notes"
+                      placeholder="What did you practice?"
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input id="date" name="date" type="date" required />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="minutes">Duration (minutes)</Label>
-                  <Input
-                    id="minutes"
-                    name="minutes"
-                    type="number"
-                    min="1"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input
-                    id="notes"
-                    name="notes"
-                    placeholder="What did you practice?"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAdding(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Save Session</Button>
-              </DialogFooter>
-            </addFetcher.Form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAdding(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">Save Session</Button>
+                </DialogFooter>
+              </addFetcher.Form>
+            </DialogContent>
+          </Dialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">Account</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <Form method="post" action="/logout">
+                <DropdownMenuItem asChild>
+                  <button type="submit" className="w-full text-left">
+                    Sign out
+                  </button>
+                </DropdownMenuItem>
+              </Form>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {sessions.length === 0 ? (

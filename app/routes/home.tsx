@@ -1,6 +1,9 @@
+import { redirect } from "react-router";
 import type { Route } from "./+types/home";
 import { SessionList } from "~/sessions-list/sessions-list";
 import { PracticeSessionService } from "~/services/practice-session";
+import { getToken } from "~/auth.server";
+import { destroySession, getSession } from "~/sessions.server";
 
 export function meta() {
   return [
@@ -9,12 +12,34 @@ export function meta() {
   ];
 }
 
-export async function loader() {
-  const response = await PracticeSessionService.getAll();
-  return { sessions: response.sessions };
+export async function loader({ request }: { request: Request }) {
+  const token = await getToken(request);
+  if (!token) {
+    return redirect("/login");
+  }
+
+  try {
+    const response = await PracticeSessionService.getAll(token);
+    return { sessions: response.sessions };
+  } catch (error) {
+    if (error instanceof Error && error.message === "Unauthorized") {
+      const session = await getSession(request.headers.get("Cookie"));
+      return redirect("/login", {
+        headers: { "Set-Cookie": await destroySession(session) },
+      });
+    }
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to load sessions.");
+  }
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request }: { request: Request }) {
+  const token = await getToken(request);
+  if (!token) {
+    return redirect("/login");
+  }
   const formData = await request.formData();
   const intentValue = formData.get("intent");
   const intent = typeof intentValue === "string" ? intentValue : "create";
@@ -22,7 +47,7 @@ export async function action({ request }: Route.ActionArgs) {
   if (intent === "delete") {
     const idValue = formData.get("id");
     const id = Number(typeof idValue === "string" ? idValue : "");
-    await PracticeSessionService.delete(id);
+    await PracticeSessionService.delete(id, token);
     return null;
   }
 
@@ -39,13 +64,16 @@ export async function action({ request }: Route.ActionArgs) {
     const notes = typeof notesValue === "string" ? notesValue : "";
     const minutes = Number(typeof minutesValue === "string" ? minutesValue : "");
 
-    await PracticeSessionService.update({
-      id,
-      activity,
-      date,
-      notes,
-      minutes,
-    });
+    await PracticeSessionService.update(
+      {
+        id,
+        activity,
+        date,
+        notes,
+        minutes,
+      },
+      token
+    );
 
     return null;
   }
@@ -60,12 +88,15 @@ export async function action({ request }: Route.ActionArgs) {
   const notes = typeof notesValue === "string" ? notesValue : "";
   const minutes = Number(typeof minutesValue === "string" ? minutesValue : "");
 
-  await PracticeSessionService.create({
-    activity,
-    date,
-    notes,
-    minutes,
-  });
+  await PracticeSessionService.create(
+    {
+      activity,
+      date,
+      notes,
+      minutes,
+    },
+    token
+  );
 
   return null;
 }

@@ -1,0 +1,113 @@
+import { Link, Form, data, redirect, useActionData, useNavigation } from "react-router";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { commitSession, getSession } from "~/sessions.server";
+
+export async function loader({ request }: { request: Request }) {
+  const session = await getSession(request.headers.get("Cookie"));
+  if (session.has("token")) {
+    return redirect("/");
+  }
+  return null;
+}
+
+export async function action({ request }: { request: Request }) {
+  const formData = await request.formData();
+  const username = formData.get("username");
+  const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
+
+  if (
+    typeof username !== "string" ||
+    typeof password !== "string" ||
+    typeof confirmPassword !== "string"
+  ) {
+    return data({ error: "All fields are required." }, { status: 400 });
+  }
+
+  if (password !== confirmPassword) {
+    return data({ error: "Passwords do not match." }, { status: 400 });
+  }
+
+  const apiBaseUrl = process.env.VITE_API_URL ?? "http://localhost:5270";
+  const registerResponse = await fetch(`${apiBaseUrl}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!registerResponse.ok) {
+    return data({ error: "Registration failed." }, { status: registerResponse.status });
+  }
+
+  const loginResponse = await fetch(`${apiBaseUrl}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!loginResponse.ok) {
+    return data({ error: "Login failed." }, { status: loginResponse.status });
+  }
+
+  const result = (await loginResponse.json()) as { token?: string };
+  if (!result.token) {
+    return data({ error: "Login failed." }, { status: 500 });
+  }
+
+  const session = await getSession(request.headers.get("Cookie"));
+  session.set("token", result.token);
+
+  return redirect("/", {
+    headers: { "Set-Cookie": await commitSession(session) },
+  });
+}
+
+export default function RegisterPage() {
+  const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting" || navigation.state === "loading";
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
+          <CardDescription className="text-center">
+            Start logging your practice sessions today
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form method="post" className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input id="username" name="username" placeholder="johndoe" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" name="password" type="password" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input id="confirmPassword" name="confirmPassword" type="password" required />
+            </div>
+            {actionData?.error && (
+              <div className="text-red-500 text-sm font-medium">{actionData.error}</div>
+            )}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Creating account..." : "Sign Up"}
+            </Button>
+          </Form>
+        </CardContent>
+        <CardFooter className="flex justify-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link to="/login" className="ml-1 text-primary hover:underline font-medium">
+            Login
+          </Link>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}

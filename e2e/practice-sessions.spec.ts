@@ -1,6 +1,13 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test as base, type APIRequestContext, type Page } from "@playwright/test";
 
 const API_BASE_URL = process.env.VITE_API_URL ?? "http://localhost:5270";
+const UI_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+
+interface AuthState {
+  username: string;
+  password: string;
+  token: string;
+}
 
 interface SessionSummary {
   id: number;
@@ -30,12 +37,18 @@ function isSessionsResponse(value: unknown): value is SessionsResponse {
   );
 }
 
-async function cleanupSessions(request: APIRequestContext, activities: string[]) {
+async function cleanupSessions(
+  request: APIRequestContext,
+  activities: string[],
+  token: string
+) {
   if (activities.length === 0) {
     return;
   }
 
-  const response = await request.get(`${API_BASE_URL}/sessions`);
+  const response = await request.get(`${API_BASE_URL}/sessions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   if (!response.ok()) {
     return;
   }
@@ -49,7 +62,11 @@ async function cleanupSessions(request: APIRequestContext, activities: string[])
   const matches = sessions.filter((session) => activities.includes(session.activity));
 
   await Promise.all(
-    matches.map((session) => request.delete(`${API_BASE_URL}/sessions/${session.id}`))
+    matches.map((session) =>
+      request.delete(`${API_BASE_URL}/sessions/${session.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    )
   );
 }
 
@@ -64,7 +81,69 @@ function uniqueActivity(label: string) {
   return `${label} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-test("creates a practice session", async ({ page, request }) => {
+function uniqueUsername(workerIndex: number) {
+  return `e2e_user_${workerIndex}_${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2, 6)}`;
+}
+
+async function registerUser(
+  request: APIRequestContext,
+  username: string,
+  password: string
+) {
+  const response = await request.post(`${API_BASE_URL}/api/auth/register`, {
+    data: { username, password },
+  });
+
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Failed to register user: ${response.status} ${body}`);
+  }
+}
+
+async function loginApi(
+  request: APIRequestContext,
+  username: string,
+  password: string
+): Promise<string> {
+  const response = await request.post(`${API_BASE_URL}/api/auth/login`, {
+    data: { username, password },
+  });
+
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Failed to login via API: ${response.status} ${body}`);
+  }
+
+  const data = (await response.json()) as { token?: string };
+  if (!data.token) {
+    throw new Error("Login API response missing token.");
+  }
+
+  return data.token;
+}
+
+async function loginUi(page: Page, username: string, password: string) {
+  await page.goto(`${UI_BASE_URL}/login`);
+  await page.getByLabel("Username").fill(username);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign In" }).click();
+  await expect(page.getByRole("heading", { name: "Practice Logger" })).toBeVisible();
+}
+
+const test = base.extend<{ auth: AuthState }>({
+  auth: async ({ page, request }, use, testInfo) => {
+    const username = uniqueUsername(testInfo.workerIndex);
+    const password = "E2E_Test_Pass_123!";
+    await registerUser(request, username, password);
+    const token = await loginApi(request, username, password);
+    await loginUi(page, username, password);
+    await use({ username, password, token });
+  },
+});
+
+test("creates a practice session", async ({ page, request, auth }) => {
   const activity = uniqueActivity("E2E Session");
   const createdActivities = [activity];
 
@@ -89,11 +168,11 @@ test("creates a practice session", async ({ page, request }) => {
     });
     await expect(cardTitle).toHaveCount(1, { timeout: 10000 });
   } finally {
-    await cleanupSessions(request, createdActivities);
+    await cleanupSessions(request, createdActivities, auth.token);
   }
 });
 
-test("edits a practice session", async ({ page, request }) => {
+test("edits a practice session", async ({ page, request, auth }) => {
   const activity = uniqueActivity("E2E Session");
   const updatedActivity = `${activity} Updated`;
   const createdActivities = [activity, updatedActivity];
@@ -129,11 +208,11 @@ test("edits a practice session", async ({ page, request }) => {
     });
     await expect(updatedTitle).toHaveCount(1, { timeout: 10000 });
   } finally {
-    await cleanupSessions(request, createdActivities);
+    await cleanupSessions(request, createdActivities, auth.token);
   }
 });
 
-test("deletes a practice session", async ({ page, request }) => {
+test("deletes a practice session", async ({ page, request, auth }) => {
   const activity = uniqueActivity("E2E Session");
   const createdActivities = [activity];
 
@@ -159,6 +238,6 @@ test("deletes a practice session", async ({ page, request }) => {
 
     await expect(card).toHaveCount(0, { timeout: 10000 });
   } finally {
-    await cleanupSessions(request, createdActivities);
+    await cleanupSessions(request, createdActivities, auth.token);
   }
 });

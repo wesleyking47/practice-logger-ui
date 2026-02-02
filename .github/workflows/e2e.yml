@@ -48,6 +48,7 @@ jobs:
         run: |
           docker run -d --name practice-logger-api --network e2e-net \
             -e ConnectionStrings__PracticeLoggerDb="Host=practice-logger-db;Port=5432;Database=practice_logger;Username=postgres;Password=postgres" \
+            -e RUN_MIGRATIONS=true \
             -e ASPNETCORE_URLS="http://+:5270" \
             -p 5270:5270 \
             practice-logger-api:ci

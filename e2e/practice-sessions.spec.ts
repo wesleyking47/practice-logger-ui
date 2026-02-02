@@ -78,13 +78,13 @@ function formatDate(date: Date) {
 }
 
 function uniqueActivity(label: string) {
-  return `${label} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const nonce = Math.random().toString(36).slice(2, 8);
+  return `${label} ${Date.now()}-${nonce}`;
 }
 
 function uniqueUsername(workerIndex: number) {
-  return `e2e_user_${workerIndex}_${Date.now()}_${Math.random()
-    .toString(36)
-    .slice(2, 6)}`;
+  const nonce = Math.random().toString(36).slice(2, 6);
+  return `e2e_user_${workerIndex}_${Date.now()}_${nonce}`;
 }
 
 async function registerUser(
@@ -98,7 +98,8 @@ async function registerUser(
 
   if (!response.ok()) {
     const body = await response.text();
-    throw new Error(`Failed to register user: ${response.status} ${body}`);
+    const status = response.status();
+    throw new Error(`Failed to register user: ${status} ${body}`);
   }
 }
 
@@ -113,7 +114,8 @@ async function loginApi(
 
   if (!response.ok()) {
     const body = await response.text();
-    throw new Error(`Failed to login via API: ${response.status} ${body}`);
+    const status = response.status();
+    throw new Error(`Failed to login via API: ${status} ${body}`);
   }
 
   const data = (await response.json()) as { token?: string };
@@ -133,13 +135,13 @@ async function loginUi(page: Page, username: string, password: string) {
 }
 
 const test = base.extend<{ auth: AuthState }>({
-  auth: async ({ page, request }, use, testInfo) => {
+  auth: async ({ page, request }, provide, testInfo) => {
     const username = uniqueUsername(testInfo.workerIndex);
     const password = "E2E_Test_Pass_123!";
     await registerUser(request, username, password);
     const token = await loginApi(request, username, password);
     await loginUi(page, username, password);
-    await use({ username, password, token });
+    await provide({ username, password, token });
   },
 });
 
